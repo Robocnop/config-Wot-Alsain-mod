@@ -10,6 +10,16 @@ namespace RoboAslainInstaller
         private readonly AppConfig _config;
         private readonly Logger _logger;
 
+        // HttpClient partagé: éviter l'épuisement des sockets (anti-pattern du using par appel)
+        private static readonly HttpClient _httpClient = CreateClient();
+
+        private static HttpClient CreateClient()
+        {
+            var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+            client.DefaultRequestHeaders.Add("User-Agent", "RoboAslainInstaller/2.0");
+            return client;
+        }
+
         public ConfigDownloader(AppConfig config, Logger logger)
         {
             _config = config;
@@ -26,38 +36,32 @@ namespace RoboAslainInstaller
 
             try
             {
-                using (var client = new HttpClient())
+                // Téléchargement
+                Console.Write("   Téléchargement en cours");
+                var response = await _httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+
+                var content = await response.Content.ReadAsByteArrayAsync();
+                await File.WriteAllBytesAsync(tempPath, content);
+                Console.WriteLine(" ✓");
+
+                // Vérifier que le fichier existe
+                if (!File.Exists(tempPath))
                 {
-                    client.DefaultRequestHeaders.Add("User-Agent", "RoboAslainInstaller/2.0");
-                    client.Timeout = TimeSpan.FromMinutes(2);
-
-                    // Téléchargement
-                    Console.Write("   Téléchargement en cours");
-                    var response = await client.GetAsync(url);
-                    response.EnsureSuccessStatusCode();
-
-                    var content = await response.Content.ReadAsByteArrayAsync();
-                    await File.WriteAllBytesAsync(tempPath, content);
-                    Console.WriteLine(" ✓");
-
-                    // Vérifier que le fichier existe
-                    if (!File.Exists(tempPath))
-                    {
-                        return OperationResult<string>.Fail(
-                            "Le fichier n'a pas été créé",
-                            $"Chemin attendu: {tempPath}"
-                        );
-                    }
-
-                    var fileInfo = new FileInfo(tempPath);
-                    _logger.Debug($"Fichier créé: {tempPath} ({FormatFileSize(fileInfo.Length)})");
-
-                    return OperationResult<string>.Ok(
-                        "Configuration téléchargée avec succès",
-                        tempPath,
-                        $"Taille: {FormatFileSize(fileInfo.Length)}"
+                    return OperationResult<string>.Fail(
+                        "Le fichier n'a pas été créé",
+                        $"Chemin attendu: {tempPath}"
                     );
                 }
+
+                var fileInfo = new FileInfo(tempPath);
+                _logger.Debug($"Fichier créé: {tempPath} ({FormatFileSize(fileInfo.Length)})");
+
+                return OperationResult<string>.Ok(
+                    "Configuration téléchargée avec succès",
+                    tempPath,
+                    $"Taille: {FormatFileSize(fileInfo.Length)}"
+                );
             }
             catch (HttpRequestException ex)
             {

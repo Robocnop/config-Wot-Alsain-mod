@@ -54,7 +54,7 @@ namespace RoboAslainInstaller
             );
         }
 
-        private AslainLocation CheckCommonLocations()
+        private AslainLocation? CheckCommonLocations()
         {
             var locations = _config.CommonLocations.ToList();
 
@@ -85,7 +85,7 @@ namespace RoboAslainInstaller
             return null;
         }
 
-        private AslainLocation DeepScanAllDrives()
+        private AslainLocation? DeepScanAllDrives()
         {
             var drives = DriveInfo.GetDrives()
                 .Where(d => d.IsReady && d.DriveType == DriveType.Fixed)
@@ -111,7 +111,7 @@ namespace RoboAslainInstaller
             return null;
         }
 
-        private AslainLocation ScanDrive(string drivePath)
+        private AslainLocation? ScanDrive(string drivePath)
         {
             try
             {
@@ -147,7 +147,7 @@ namespace RoboAslainInstaller
             return null;
         }
 
-        private AslainLocation ValidateAslainFolder(string path)
+        private AslainLocation? ValidateAslainFolder(string path)
         {
             if (!Directory.Exists(path))
                 return null;
@@ -171,7 +171,7 @@ namespace RoboAslainInstaller
             };
         }
 
-        private string PromptForManualPath()
+        private string? PromptForManualPath()
         {
             Console.WriteLine("\n📝 Vous pouvez entrer le chemin manuellement:");
             Console.WriteLine("Exemple: C:\\Games\\World_of_Tanks_EU\\Aslain_Modpack");
