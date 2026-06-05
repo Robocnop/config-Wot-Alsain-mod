@@ -12,6 +12,16 @@ namespace RoboAslainInstaller
         private readonly Logger _logger;
         private const string ASLAIN_DOWNLOAD_URL = "https://aslain.com/index.php?/topic/13-download/"; // URL de base
 
+        // HttpClient partagé (timeout long pour le gros fichier installateur)
+        private static readonly HttpClient _httpClient = CreateClient();
+
+        private static HttpClient CreateClient()
+        {
+            var client = new HttpClient { Timeout = TimeSpan.FromMinutes(30) };
+            client.DefaultRequestHeaders.Add("User-Agent", "RoboAslainInstaller/2.0");
+            return client;
+        }
+
         public AslainUpdater(AppConfig config, Logger logger)
         {
             _config = config;
@@ -21,7 +31,7 @@ namespace RoboAslainInstaller
         /// <summary>
         /// Vérifie et télécharge la dernière version d'Aslain
         /// </summary>
-        public async Task<OperationResult<string>> DownloadLatestAslainAsync(string downloadUrl = null)
+        public async Task<OperationResult<string>> DownloadLatestAslainAsync(string? downloadUrl = null)
         {
             _logger.Info("🔄 Recherche de la dernière version d'Aslain...");
 
@@ -60,46 +70,40 @@ namespace RoboAslainInstaller
                 _logger.Info($"📥 Téléchargement depuis: {url}");
                 _logger.Info("   Cela peut prendre plusieurs minutes...");
 
-                using (var client = new HttpClient())
+                // Téléchargement avec progression
+                using (var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
                 {
-                    client.Timeout = TimeSpan.FromMinutes(30); // Fichier volumineux
-                    client.DefaultRequestHeaders.Add("User-Agent", "RoboAslainInstaller/2.0");
+                    response.EnsureSuccessStatusCode();
 
-                    // Téléchargement avec progression
-                    using (var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+                    var totalBytes = response.Content.Headers.ContentLength ?? -1;
+                    var downloadedBytes = 0L;
+
+                    using (var contentStream = await response.Content.ReadAsStreamAsync())
+                    using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true))
                     {
-                        response.EnsureSuccessStatusCode();
+                        var buffer = new byte[8192];
+                        var lastPercent = 0;
 
-                        var totalBytes = response.Content.Headers.ContentLength ?? -1;
-                        var downloadedBytes = 0L;
-
-                        using (var contentStream = await response.Content.ReadAsStreamAsync())
-                        using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true))
+                        while (true)
                         {
-                            var buffer = new byte[8192];
-                            var lastPercent = 0;
+                            var bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length);
+                            if (bytesRead == 0) break;
 
-                            while (true)
+                            await fileStream.WriteAsync(buffer, 0, bytesRead);
+                            downloadedBytes += bytesRead;
+
+                            if (totalBytes > 0)
                             {
-                                var bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length);
-                                if (bytesRead == 0) break;
-
-                                await fileStream.WriteAsync(buffer, 0, bytesRead);
-                                downloadedBytes += bytesRead;
-
-                                if (totalBytes > 0)
+                                var percent = (int)((downloadedBytes * 100) / totalBytes);
+                                if (percent > lastPercent && percent % 10 == 0)
                                 {
-                                    var percent = (int)((downloadedBytes * 100) / totalBytes);
-                                    if (percent > lastPercent && percent % 10 == 0)
-                                    {
-                                        Console.Write($"\r   Progression: {percent}% ({FormatFileSize(downloadedBytes)} / {FormatFileSize(totalBytes)})   ");
-                                        lastPercent = percent;
-                                    }
+                                    Console.Write($"\r   Progression: {percent}% ({FormatFileSize(downloadedBytes)} / {FormatFileSize(totalBytes)})   ");
+                                    lastPercent = percent;
                                 }
                             }
-
-                            Console.WriteLine($"\r   Progression: 100% ({FormatFileSize(downloadedBytes)})   ");
                         }
+
+                        Console.WriteLine($"\r   Progression: 100% ({FormatFileSize(downloadedBytes)})   ");
                     }
                 }
 
@@ -212,7 +216,7 @@ namespace RoboAslainInstaller
         /// <summary>
         /// Télécharge ET installe la dernière version
         /// </summary>
-        public async Task<OperationResult> UpdateAslainAsync(AslainLocation? aslainLocation = null, string downloadUrl = null)
+        public async Task<OperationResult> UpdateAslainAsync(AslainLocation? aslainLocation = null, string? downloadUrl = null)
         {
             // Télécharger
             var downloadResult = await DownloadLatestAslainAsync(downloadUrl);

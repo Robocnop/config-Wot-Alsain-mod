@@ -1,0 +1,23 @@
+# Build artefacts .NET
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+
+# Visual Studio / Rider
+.vs/
+.idea/
+
+# Config Claude Code (jamais publier)
+.claude/
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Logs / temporaires
+*.log
+*.tmp
