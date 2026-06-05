@@ -12,6 +12,7 @@ obj/
 
 # Config Claude Code (jamais publier)
 .claude/
+CLAUDE.md
 
 # OS
 Thumbs.db
