@@ -7,7 +7,7 @@ namespace RoboAslainInstaller
     {
         public string GitHubUser { get; set; } = "Robocnop";
         public string GitHubRepo { get; set; } = "config-Wot-Alsain-mod";
-        public string ConfigFileName { get; set; } = "robo_configv4.inf";  // ← Changé pour v4
+        public string ConfigFileName { get; set; } = "robo_configv5.inf";  // ← Changé pour v5
         public string InstallerName { get; set; } = "Aslains_WoT_Modpack_Installer.exe";
         public string WorldOfTanksFolderName { get; set; } = "World_of_Tanks_EU";
         public string AslainFolderName { get; set; } = "Aslain_Modpack";
