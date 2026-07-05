@@ -28,8 +28,15 @@ Application console .NET 8 qui automatise tout :
 ### Build
 
 ```
+# Build simple
 dotnet build -c Release RoboAslainInstaller/RoboAslainInstaller.csproj
+
+# Exe autonome (fichier unique, self-contained win-x64, ~33 Mo)
+dotnet publish RoboAslainInstaller/RoboAslainInstaller.csproj -c Release
 ```
+
+Exe publié : `RoboAslainInstaller/bin/Release/net8.0/win-x64/publish/RoboAslainInstaller.exe`
+(autonome, aucun .NET requis sur la machine cible).
 
 ### Utilisation
 
